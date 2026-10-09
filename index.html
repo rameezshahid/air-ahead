@@ -5,8 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>AirAhead: plan around air quality</title>
   <meta name="description" content="Plan your day around air quality and wildfire smoke. Live AQHI forecasts from Environment and Climate Change Canada, with your own risk threshold." />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="styles.css" />
   <style>
+    #map { height: 440px; border-radius: 10px; border: 1px solid var(--line); margin-top: 12px; background: var(--surface-2); z-index: 0; }
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+    .leaflet-popup-content { margin: 10px 12px; font: inherit; line-height: 1.45; }
+    .map-pop .pop-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+    .map-pop .badge { margin-bottom: 4px; }
+    .leaflet-container a.leaflet-popup-close-button { color: var(--muted); }
+    #map .leaflet-tile-pane { filter: saturate(0.6) brightness(1.03); }
+    #map.dark-tiles .leaflet-tile-pane { filter: invert(1) hue-rotate(180deg) brightness(0.9) contrast(0.9) saturate(0.5); }
+    @media (max-width: 600px) { #map { height: 340px; } }
     .now { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
     .dial { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 2.4rem; font-weight: 800; }
     .chart { width: 100%; height: 220px; display: block; }
@@ -59,6 +69,17 @@
       <p class="small muted" style="margin:10px 0 0">People at higher risk include children, people over 65, and those with heart or lung conditions such as asthma. They may want a lower threshold.</p>
     </section>
 
+    <section class="card" id="map-card">
+      <div class="row" style="justify-content:space-between">
+        <div>
+          <h2>Air quality across Canada right now</h2>
+          <p class="sub" id="map-summary" style="margin:0">Loading monitoring areas…</p>
+        </div>
+      </div>
+      <div id="map" role="region" aria-label="Map of AQHI monitoring areas. Select a dot to see that area's conditions, or use the location list above."></div>
+      <div class="legend" id="map-legend" style="margin-top:8px"></div>
+    </section>
+
     <div id="error" class="callout bad hidden" style="margin-top:18px"></div>
 
     <section class="card" id="now-card">
@@ -102,7 +123,9 @@
     </div>
   </footer>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="lib/aqhi.js"></script>
+  <script src="lib/map.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

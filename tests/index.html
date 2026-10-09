@@ -15,6 +15,7 @@
     </div>
   </main>
   <script src="../lib/aqhi.js"></script>
+  <script src="../lib/map.js"></script>
   <script>
     const results = [];
     const test = (name, fn) => { try { fn(); results.push({ name, ok: true }); } catch (e) { results.push({ name, ok: false, error: e.message }); } };
@@ -83,6 +84,21 @@
       const locs = [{ id: "TOR", name: "Toronto", lat: 43.65, lon: -79.38 }, { id: "VAN", name: "Vancouver", lat: 49.28, lon: -123.12 }];
       const n = AA.nearest(locs, 43.59, -79.64); // Mississauga
       eq(n.id, "TOR"); eq(n.km < 30, true);
+    });
+
+    test("Map markers use the category colour and grow when selected", () => {
+      const normal = AA.markerStyle(8, false), sel = AA.markerStyle(8, true);
+      eq(normal.fillColor, AA.category(8).color);
+      eq(sel.radius > normal.radius, true);
+      eq(sel.weight > normal.weight, true);
+      eq(AA.markerStyle(null, false).fillColor, "#8a94a3", "grey when there's no reading");
+    });
+
+    test("Map summary counts areas by risk and finds the worst", () => {
+      const locs = [{ id: "A", name: "Alpha" }, { id: "B", name: "Beta" }, { id: "C", name: "Gamma" }];
+      const obs = new Map([["A", { aqhi: 2 }], ["B", { aqhi: 7.4 }], ["C", { aqhi: 3 }]]);
+      const s = AA.summarize(locs, obs);
+      eq(s.counts.low, 2); eq(s.counts.high, 1); eq(s.worst.name, "Beta");
     });
 
     const passed = results.filter((r) => r.ok).length;

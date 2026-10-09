@@ -42,7 +42,34 @@
     save(); render();
   });
   $("threshold").addEventListener("input", () => { setThreshold(+$("threshold").value); save(); render(); });
-  $("location").addEventListener("change", () => { prefs.location = $("location").value; save(); loadForecast(); });
+  $("location").addEventListener("change", () => selectLocation($("location").value));
+
+  // ---- Map ------------------------------------------------------------------
+
+  const map = AA.createMap($("map"), { onSelect: (id) => selectLocation(id) });
+  if (!map) {
+    $("map-summary").textContent = "The map couldn't load. Use the location list above instead.";
+    $("map").classList.add("hidden");
+  }
+  $("map-legend").innerHTML = AA.CATEGORIES.map((c) => `<span><i style="background:${c.color};border-radius:50%"></i>${c.name}</span>`).join("") +
+    `<span><i style="border:2px dashed var(--ink);border-radius:50%;background:none"></i>Selected area</span>`;
+
+  // One entry point for every way of choosing an area: map, list, or "use my location".
+  function selectLocation(id, { fly = true } = {}) {
+    if (!locations.some((l) => l.id === id)) return;
+    prefs.location = id;
+    $("location").value = id;
+    save();
+    if (map) map.highlight(id, { fly });
+    loadForecast();
+  }
+
+  function renderMapSummary() {
+    const { counts, worst } = AA.summarize(locations, observations);
+    const parts = AA.CATEGORIES.filter((c) => counts[c.id]).map((c) => `${counts[c.id]} ${c.name.toLowerCase()}`);
+    $("map-summary").innerHTML = `${locations.length} monitoring areas: ${parts.join(", ")}.` +
+      (worst ? ` Highest right now: <strong>${esc(worst.name)}</strong> (AQHI ${Math.round(worst.aqhi) > 10 ? "10+" : Math.round(worst.aqhi)}). Select any dot for details.` : "");
+  }
 
   // Below 4 is "low risk", where official guidance is to carry on as usual, so alerting there isn't meaningful.
   function setThreshold(v) {
@@ -60,7 +87,7 @@
         const n = AA.nearest(locations, pos.coords.latitude, pos.coords.longitude);
         if (!n) return;
         $("locate-note").textContent = `Nearest AQHI area: ${n.name} (about ${n.km} km away). Your location isn't stored or sent anywhere.`;
-        prefs.location = n.id; $("location").value = n.id; save(); loadForecast();
+        selectLocation(n.id);
       },
       () => { $("locate-note").textContent = "Couldn't get your location. Pick from the list instead."; },
       { maximumAge: 600000, timeout: 10000 }
@@ -93,6 +120,8 @@
       prefs.location = (toronto || locations[0]).id;
     }
     $("location").value = prefs.location;
+    if (map) map.setLocations(locations, observations);
+    renderMapSummary();
   }
 
   async function loadForecast() {
@@ -154,6 +183,16 @@
       }).join("")}</div></div>`;
     }
 
+    if (map) {
+      map.updateInfo(next24.length
+        ? `<div>Next 24 h: peak AQHI <strong>${Math.round(peak.aqhi)}</strong> at ${when(peak)}.</div>` +
+          (above
+            ? `<div style="color:var(--bad)">Reaches your threshold of ${prefs.threshold} at ${when(above)}.</div>`
+            : `<div>Stays below your threshold of ${prefs.threshold}.</div>`) +
+          `<div style="margin-top:4px"><a href="#now-card">Full forecast below ↓</a></div>`
+        : `<div class="muted">No forecast for this area right now.</div>`);
+    }
+
     drawChart(hours);
   }
 
@@ -209,6 +248,7 @@
   // ---- Start --------------------------------------------------------------
 
   loadLocations()
-    .then(loadForecast)
+    // On first load, mark the saved area but keep the overview: no zoom, no popup covering the map.
+    .then(() => { if (map) map.highlight(prefs.location, { fly: false, popup: false }); return loadForecast(); })
     .catch((e) => showError(`Couldn't reach Environment Canada's air quality service (${e.message}). Try again shortly.`));
 })();

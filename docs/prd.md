@@ -33,6 +33,7 @@ Turn the official AQHI forecast into **a decision about when to be outside**, pe
 | Must | First crossing, best window and peak for the next 24 hours | ✅ |
 | Must | Clear errors when the data service is unavailable | ✅ |
 | Should | 48-hour chart in the location's local time | ✅ |
+| Should | Map of all areas coloured by current risk; selecting one highlights it and shows its info | ✅ v1.1 |
 | Should | Nearest area from browser location, not stored | ✅ |
 | Should | Shareable URL | ✅ |
 | Could | Notifications while the tab is open | ✅ |
@@ -58,6 +59,9 @@ Turn the official AQHI forecast into **a decision about when to be outside**, pe
 | **Threshold floor of 4** | Allow 1–10 | Below 4 is "low risk" (official guidance: carry on as usual); alerts there contradict the guidance | Can't set ultra-low alerts |
 | **At-risk default 4, general default 7** | One default | Mirrors where official guidance first changes for each group | Users must pick a profile |
 | **Exclude Quebec, say so** | Mix in a different index | Info-Smog isn't comparable to the AQHI; mixing them would mislead | Quebec users aren't served |
+| **Map: points with a highlight ring, not region shapes** | Draw region boundaries | ECCC publishes AQHI per community (an average of local stations), not per region. Drawing boundaries would imply precision the data doesn't have | Less "filled-in" look than a choropleth |
+| **Map, list and location share one selection path** | Separate handlers | Whichever way a user picks an area, the map, cards, chart and URL stay in sync | Slightly more coupling in the UI code |
+| **OpenStreetMap tiles** | Commercial basemaps | Free with attribution for light use and no API key. A keyed provider (CARTO) started showing "API key required" during development | Must stay within OSM's tile usage policy; revisit if traffic grows |
 
 ## Risks
 
@@ -67,6 +71,7 @@ Turn the official AQHI forecast into **a decision about when to be outside**, pe
 | API changes its format (it already mixes hourly and period records) | Tests built on real response shapes; explicit filtering |
 | Users rely on it as medical advice | Clear disclaimer; official guidance only |
 | Notifications stop when the tab closes | Labelled clearly in the button text |
+| Map tiles fail to load (third-party dependency) | The location list stays fully usable; if the map library fails, the map hides and says so |
 
 ## Roadmap
 
