@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AirAhead tests</title>
+  <link rel="stylesheet" href="../styles.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <h2>AirAhead tests</h2>
+      <p class="sub" id="summary">Running…</p>
+      <div class="table-wrap"><table><tbody id="results"></tbody></table></div>
+    </div>
+  </main>
+  <script src="../lib/aqhi.js"></script>
+  <script>
+    const results = [];
+    const test = (name, fn) => { try { fn(); results.push({ name, ok: true }); } catch (e) { results.push({ name, ok: false, error: e.message }); } };
+    const eq = (a, b, m) => { if (a !== b) throw new Error(`${m || "expected"}: got ${JSON.stringify(a)}, want ${JSON.stringify(b)}`); };
+
+    // Shape matches api.weather.gc.ca aqhi-forecasts-realtime features.
+    const feat = (pub, hour, aqhi, type = "original") => ({ properties: {
+      publication_datetime: pub, forecast_datetime: `2026-10-10T${String(hour).padStart(2, "0")}:00:00Z`,
+      forecast_datetime_text_en: `${((hour + 20) % 12) || 12}:00 ${(hour + 20) % 24 < 12 ? "AM" : "PM"} EDT Saturday  10 October 2026`,
+      aqhi, forecast_type: type } });
+
+    test("Categories follow the official AQHI bands", () => {
+      eq(AA.category(1).id, "low"); eq(AA.category(3.4).id, "low");
+      eq(AA.category(3.5).id, "moderate"); eq(AA.category(6).id, "moderate");
+      eq(AA.category(7).id, "high"); eq(AA.category(10.4).id, "high");
+      eq(AA.category(11).id, "very-high");
+    });
+
+    test("At-risk profile defaults to a lower threshold", () => {
+      eq(AA.PROFILES.atRisk.defaultThreshold < AA.PROFILES.general.defaultThreshold, true);
+    });
+
+    test("Keeps only the latest publication", () => {
+      const f = AA.latestForecast([feat("2026-10-10T09:00:00Z", 10, 2), feat("2026-10-10T21:00:00Z", 10, 5), feat("2026-10-10T21:00:00Z", 11, 6)]);
+      eq(f.length, 2); eq(f[0].aqhi, 5);
+    });
+
+    test("Amended forecast replaces the original for the same hour", () => {
+      const f = AA.latestForecast([feat("P", 10, 3), feat("P", 10, 8, "amended")]);
+      eq(f.length, 1); eq(f[0].aqhi, 8);
+    });
+
+    // Regression: the live API returns period summaries with no forecast_datetime.
+    const period = { properties: { aqhi_type: "AQHI-Forecast-Period", publication_datetime: "P", forecast_type: "original",
+      forecast_period: { period_2: { forecast_period_en: "Tonight", aqhi: 2, aqhi_insmoke: null }, period_3: { forecast_period_en: "Tomorrow", aqhi: 4, aqhi_insmoke: 6 } } } };
+
+    test("Ignores period summaries when building the hourly forecast", () => {
+      const f = AA.latestForecast([{ properties: { ...feat("P", 10, 3).properties, aqhi_type: "AQHI-Forecast" } }, period]);
+      eq(f.length, 1); eq(f[0].aqhi, 3);
+    });
+
+    test("Builds the multi-day outlook and keeps the smoke value separate", () => {
+      const o = AA.periodOutlook([period]);
+      eq(o.length, 2); eq(o[0].name, "Tonight"); eq(o[1].aqhi, 4); eq(o[1].smoke, 6); eq(o[0].smoke, null);
+    });
+
+    test("Parses local time labels", () => {
+      const l = AA.localLabel("6:00 AM ADT Wednesday  7 October 2026");
+      eq(l.hour, "6 AM"); eq(l.day, "Wed"); eq(l.tz, "ADT");
+    });
+
+    test("Finds the first hour at or above the threshold", () => {
+      const hours = [2, 3, 4, 7, 8, 3].map((aqhi, i) => ({ aqhi, i }));
+      eq(AA.firstAbove(hours, 7).i, 3);
+      eq(AA.firstAbove(hours, 9), null);
+    });
+
+    test("Best window is the longest run below the threshold", () => {
+      const hours = [2, 8, 2, 2, 3, 9, 2].map((aqhi, i) => ({ aqhi, i }));
+      const w = AA.bestWindow(hours, 7);
+      eq(w.start.i, 2); eq(w.end.i, 4); eq(w.length, 3); eq(w.max, 3);
+      eq(AA.bestWindow([{ aqhi: 9 }], 7), null);
+    });
+
+    test("Nearest location by great-circle distance", () => {
+      const locs = [{ id: "TOR", name: "Toronto", lat: 43.65, lon: -79.38 }, { id: "VAN", name: "Vancouver", lat: 49.28, lon: -123.12 }];
+      const n = AA.nearest(locs, 43.59, -79.64); // Mississauga
+      eq(n.id, "TOR"); eq(n.km < 30, true);
+    });
+
+    const passed = results.filter((r) => r.ok).length;
+    window.TEST_RESULTS = results;
+    document.getElementById("summary").textContent = `${passed} of ${results.length} tests passed`;
+    document.getElementById("results").innerHTML = results.map((r) =>
+      `<tr><td><span class="badge ${r.ok ? "good" : "bad"}">${r.ok ? "PASS" : "FAIL"}</span></td><td>${r.name}${r.ok ? "" : `<div class="small muted">${r.error}</div>`}</td></tr>`).join("");
+  </script>
+</body>
+</html>

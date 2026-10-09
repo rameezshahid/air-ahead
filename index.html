@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en-CA">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AirAhead: plan around air quality</title>
+  <meta name="description" content="Plan your day around air quality and wildfire smoke. Live AQHI forecasts from Environment and Climate Change Canada, with your own risk threshold." />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .now { display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center; }
+    .dial { width: 104px; height: 104px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 2.4rem; font-weight: 800; }
+    .chart { width: 100%; height: 220px; display: block; }
+    .chart text { fill: var(--muted); font-size: 10px; }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 0.82rem; color: var(--muted); }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+    input[type="range"] { width: 100%; accent-color: var(--accent); }
+    @media (max-width: 600px) { .now { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <header class="site">
+    <div class="wrap">
+      <div class="brand"><span class="leaf" aria-hidden="true">◆</span> AirAhead</div>
+      <nav>
+        <a href="#about">About the AQHI</a>
+        <a href="https://github.com/rameezshahid/air-ahead">GitHub</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h1>When's the best time to be outside today?</h1>
+      <p>Wildfire smoke and smog change hour by hour. AirAhead reads Environment Canada's live Air Quality Health Index forecast and shows when air quality crosses <em>your</em> threshold, and the best window to get outside.</p>
+    </section>
+
+    <section class="card">
+      <div class="grid four">
+        <div style="grid-column: span 2">
+          <label for="location">Location</label>
+          <div class="row" style="flex-wrap:nowrap">
+            <select id="location"><option>Loading locations…</option></select>
+            <button type="button" id="locate" title="Use my location">📍</button>
+          </div>
+          <p class="small muted" id="locate-note" style="margin:4px 0 0"></p>
+        </div>
+        <div>
+          <label for="profile">Who's this for?</label>
+          <select id="profile">
+            <option value="general">General population</option>
+            <option value="atRisk">At higher risk</option>
+          </select>
+        </div>
+        <div>
+          <label for="threshold">Alert me at AQHI <strong id="threshold-value">7</strong></label>
+          <input type="range" id="threshold" min="4" max="10" step="1" value="7" />
+        </div>
+      </div>
+      <p class="small muted" style="margin:10px 0 0">People at higher risk include children, people over 65, and those with heart or lung conditions such as asthma. They may want a lower threshold.</p>
+    </section>
+
+    <div id="error" class="callout bad hidden" style="margin-top:18px"></div>
+
+    <section class="card" id="now-card">
+      <div class="now">
+        <div class="dial" id="dial">–</div>
+        <div>
+          <div class="muted small" id="now-label">Current conditions</div>
+          <h2 id="now-category" style="font-size:1.4rem">Loading…</h2>
+          <p id="now-advice" style="margin:4px 0 0"></p>
+          <p class="small muted" id="now-time" style="margin:6px 0 0"></p>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Plan your day</h2>
+      <div class="grid two" id="plan" style="margin-top:10px"></div>
+    </section>
+
+    <section class="card">
+      <div class="row" style="justify-content:space-between">
+        <div><h2>Next 48 hours</h2><p class="sub" id="forecast-sub" style="margin:0">Hourly AQHI forecast</p></div>
+        <button type="button" id="notify" class="no-print">🔔 Notify me while this tab is open</button>
+      </div>
+      <svg class="chart" id="chart" role="img" aria-label="Hourly AQHI forecast chart"></svg>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="card" id="about">
+      <h2>About the AQHI</h2>
+      <p style="margin:6px 0">The Air Quality Health Index rates the health risk from air pollution on a scale from 1 to 10+. It combines ground-level ozone, fine particulate matter and nitrogen dioxide; during wildfire smoke events, Environment Canada calculates it from fine particulate matter alone. Quebec uses its own Info-Smog program, so its communities aren't listed.</p>
+      <div class="table-wrap"><table><thead><tr><th>AQHI</th><th>Risk</th><th>General population</th><th>At higher risk</th></tr></thead><tbody id="scale"></tbody></table></div>
+      <p class="small muted" style="margin-bottom:0">Guidance paraphrased from <a href="https://www.canada.ca/en/environment-climate-change/services/air-quality-health-index/about.html">Environment and Climate Change Canada</a>. Data: <a href="https://api.weather.gc.ca/">MSC GeoMet / api.weather.gc.ca</a>, Open Government Licence – Canada.</p>
+    </section>
+  </main>
+
+  <footer class="site">
+    <div class="wrap">
+      <p>AirAhead is an independent portfolio project, not affiliated with Environment and Climate Change Canada. It isn't medical advice: if you have symptoms, talk to a health professional.</p>
+      <p><a href="https://github.com/rameezshahid/air-ahead">Source and product docs on GitHub</a> · <a href="tests/index.html">Run the tests</a></p>
+    </div>
+  </footer>
+
+  <script src="lib/aqhi.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
